@@ -1,8 +1,9 @@
 mod app;
 mod models;
+mod login_register;
 
-use app::App;
+use app::AppRoot;
 
 fn main() {
-    yew::Renderer::<App>::new().render();
+    yew::Renderer::<AppRoot>::new().render();
 }
