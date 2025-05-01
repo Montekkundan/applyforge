@@ -66,13 +66,3 @@
 - Password: docker
 - Database: actix-api-db
 
-**Common Commands:**
-- Start containers: `make docker-up`
-- Stop containers: `make docker-down`
-- Wipe all DB data: `docker compose down -v`
-- Clean (truncate) users and jobs: `make db-clean`
-- Re-initialize tables: `make db-init`
-- Prepare SQLx macros: `make prepare`
-- Run backend: `make backend`
-- Run frontend: `make frontend`
-- Run both: `make run`
