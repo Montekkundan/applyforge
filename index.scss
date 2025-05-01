@@ -1,35 +1,139 @@
-html,
-body {
-  height: 100%;
-  margin: 0;
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+input[type="date"]::-webkit-input-placeholder {
+  color: oklch(0.985 0 0);
+}
+input[type="date"]::-moz-placeholder {
+  color: oklch(0.985 0 0);
+}
+input[type="date"]:-ms-input-placeholder {
+  color: oklch(0.985 0 0);
+}
+input[type="date"]::placeholder {
+  color: oklch(0.985 0 0);
 }
 
 body {
-  align-items: center;
+  min-height: 100vh;
+  background: oklch(0.145 0 0);
+  color: oklch(0.985 0 0);
   display: flex;
+  align-items: center;
   justify-content: center;
-
-  background: linear-gradient(to bottom right, #444444, #009a5b);
-  font-size: 1.5rem;
 }
 
 main {
-  color: #fff6d5;
-  font-family: sans-serif;
-  text-align: center;
+  background: oklch(0.205 0 0);
+  color: oklch(0.985 0 0);
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 32px #0008;
+  padding: 2.5rem 2rem 2rem 2rem;
+  min-width: 350px;
+  max-width: 420px;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
 }
 
-.logo {
-  height: 20em;
+h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  color: oklch(0.985 0 0);
 }
 
-.heart:after {
-  content: "❤️";
-
-  font-size: 1.75em;
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
 }
 
-h1 + .subtitle {
-  display: block;
-  margin-top: -1em;
+input, select {
+  background: oklch(0.145 0 0);
+  color: oklch(0.985 0 0);
+  border: 1.5px solid oklch(0.269 0 0);
+  border-radius: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+input:focus, select:focus {
+  border: 1.5px solid oklch(0.985 0 0);
+}
+
+button {
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background 0.2s, color 0.2s;
+}
+button[type="submit"] {
+  background: oklch(0.985 0 0);
+  color: oklch(0.205 0 0);
+  margin-bottom: 0.5rem;
+}
+button[type="submit"]:hover {
+  background: oklch(0.7 0 0);
+  color: oklch(0.985 0 0);
+}
+.export-btn {
+  background: oklch(0.269 0 0);
+  color: oklch(0.985 0 0);
+  margin-right: 0.5rem;
+}
+.export-btn:hover {
+  background: oklch(0.985 0 0);
+  color: oklch(0.269 0 0);
+}
+.oauth-btn {
+  background: oklch(0.577 0.245 27.325);
+  color: oklch(0.985 0 0);
+}
+.oauth-btn:hover {
+  background: oklch(0.985 0 0);
+  color: oklch(0.577 0.245 27.325);
+}
+
+section {
+  margin-bottom: 2rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+th, td {
+  padding: 0.7rem 0.5rem;
+  border-bottom: 1px solid oklch(0.269 0 0);
+  text-align: left;
+}
+th {
+  color: oklch(0.985 0 0);
+  font-weight: 700;
+  background: oklch(0.205 0 0);
+}
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+ul {
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  justify-content: center;
+}
+ul li {
+  background: oklch(0.269 0 0);
+  color: oklch(0.985 0 0);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
 }
