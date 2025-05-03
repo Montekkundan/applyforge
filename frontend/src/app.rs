@@ -1,24 +1,12 @@
 use yew::prelude::*;
 use crate::login_register::LoginRegister;
 use crate::models::ApplicationStatus;
-use std::collections::HashMap;
 use gloo_net::http::Request;
 use gloo_storage::{LocalStorage, Storage};
-use uuid::Uuid;
 
 const USER_KEY: &str = "applyforge_user";
 
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct JobApplication {
-    pub id: Option<i32>,
-    #[serde(default = "Uuid::new_v4")]
-    pub temp_id: Uuid,
-    pub company: String,
-    pub position: String,
-    pub status: ApplicationStatus,
-    pub date: String,
-    pub username: String,
-}
+use crate::models::JobApplication;
 
 #[function_component(AppRoot)]
 pub fn app_root() -> Html {
@@ -61,12 +49,7 @@ pub fn app_root() -> Html {
                         Ok(resp) => {
                             if resp.ok() {
                                 match resp.json::<Vec<JobApplication>>().await {
-                                    Ok(mut fetched_jobs) => {
-                                        for job in &mut fetched_jobs {
-                                            if job.temp_id == Uuid::nil() {
-                                                job.temp_id = Uuid::new_v4();
-                                            }
-                                        }
+                                    Ok(fetched_jobs) => {
                                         applications_for_async.set(fetched_jobs);
                                     }
                                     Err(e) => gloo::console::error!(format!("Failed to parse jobs JSON: {:?}", e))
@@ -104,8 +87,7 @@ pub fn app_root() -> Html {
                 let date_val = (*date).clone();
 
                 let temp_job = JobApplication {
-                    id: None,
-                    temp_id: Uuid::new_v4(),
+                    id: None, 
                     company: company_val.clone(),
                     position: position_val.clone(),
                     status: status_val.clone(),
@@ -122,19 +104,17 @@ pub fn app_root() -> Html {
                 date.set(today.clone());
 
                 let applications_clone = applications.clone();
-                let username_clone = username.clone();
-                let temp_job_clone = temp_job.clone();
 
                 wasm_bindgen_futures::spawn_local(async move {
                     let base_url = "http://127.0.0.1:8080";
                     let url = format!("{}/api/jobs", base_url);
 
                     let backend_job_data = serde_json::json!({
-                        "company": temp_job_clone.company,
-                        "position": temp_job_clone.position,
-                        "status": temp_job_clone.status,
-                        "date": temp_job_clone.date,
-                        "username": username_clone
+                        "company": temp_job.company,
+                        "position": temp_job.position,
+                        "status": temp_job.status,
+                        "date": temp_job.date,
+                        "username": temp_job.username
                     });
 
                     match Request::post(&url)
@@ -146,22 +126,18 @@ pub fn app_root() -> Html {
                                 Ok(resp) => {
                                     if resp.ok() {
                                         match resp.json::<JobApplication>().await {
-                                            Ok(mut confirmed_job) => {
+                                            Ok(confirmed_job) => {
                                                 let mut current_apps = (*applications_clone).clone();
-                                                if let Some(index) = current_apps.iter().position(|j| j.temp_id == temp_job_clone.temp_id) {
-                                                    if confirmed_job.temp_id == Uuid::nil() {
-                                                        confirmed_job.temp_id = temp_job_clone.temp_id;
-                                                    }
+                                                // Replace the optimistic job (id==0) with the confirmed job (real id)
+                                                if let Some(index) = current_apps.iter().position(|j| j.id.is_none() && j.company == confirmed_job.company && j.position == confirmed_job.position && j.date == confirmed_job.date) {
                                                     current_apps[index] = confirmed_job;
                                                     applications_clone.set(current_apps);
-                                                } else {
-                                                    gloo::console::warn!("Optimistically added job not found after confirmation?");
                                                 }
                                             }
                                             Err(e) => {
                                                 gloo::dialogs::alert(&format!("Failed to parse add job response: {:?}", e));
                                                 let mut current_apps = (*applications_clone).clone();
-                                                current_apps.retain(|j| j.temp_id != temp_job_clone.temp_id);
+                                                current_apps.retain(|j| j.id.is_some());
                                                 applications_clone.set(current_apps);
                                             }
                                         }
@@ -169,14 +145,14 @@ pub fn app_root() -> Html {
                                         let error_body = resp.text().await.unwrap_or_else(|_| "Unknown error".to_string());
                                         gloo::dialogs::alert(&format!("Failed to add job: {} - {}", resp.status(), error_body));
                                         let mut current_apps = (*applications_clone).clone();
-                                        current_apps.retain(|j| j.temp_id != temp_job_clone.temp_id);
+                                        current_apps.retain(|j| j.id.is_some());
                                         applications_clone.set(current_apps);
                                     }
                                 }
                                 Err(e) => {
                                     gloo::dialogs::alert(&format!("Failed to send add job request: {:?}", e));
                                     let mut current_apps = (*applications_clone).clone();
-                                    current_apps.retain(|j| j.temp_id != temp_job_clone.temp_id);
+                                    current_apps.retain(|j| j.id.is_some());
                                     applications_clone.set(current_apps);
                                 }
                             }
@@ -184,7 +160,7 @@ pub fn app_root() -> Html {
                         Err(e) => {
                             gloo::dialogs::alert(&format!("Failed to build add job request: {}", e));
                             let mut current_apps = (*applications_clone).clone();
-                            current_apps.retain(|j| j.temp_id != temp_job_clone.temp_id);
+                            current_apps.retain(|j| j.id.is_some());
                             applications_clone.set(current_apps);
                         }
                     }
@@ -240,18 +216,6 @@ pub fn app_root() -> Html {
     if user.is_none() {
         html! { <LoginRegister on_success={on_success} /> }
     } else {
-        let mut status_counts: HashMap<&str, usize> = HashMap::new();
-        for app in applications.iter() {
-            let key = match app.status {
-                ApplicationStatus::Applied => "Applied",
-                ApplicationStatus::Interview => "Interview",
-                ApplicationStatus::Offer => "Offer",
-                ApplicationStatus::Rejected => "Rejected",
-                ApplicationStatus::Accepted => "Accepted",
-            };
-            *status_counts.entry(key).or_insert(0) += 1;
-        }
-
         html! {
             <main style="max-width:600px;margin:2rem auto;padding:2rem;background:oklch(0.205 0 0 / 0.9);border-radius:1rem;box-shadow:0 2px 16px #0008;color:oklch(0.9 0 0);">
                 <h1 style="text-align:center;color:oklch(0.985 0 0);">{ "Job Application Tracker" }</h1>
@@ -272,15 +236,6 @@ pub fn app_root() -> Html {
                 </form>
 
                 <section style="margin-bottom:2rem;">
-                    <h2 style="border-bottom: 1px solid #444; padding-bottom: 0.5rem;">{ "Analytics" }</h2>
-                    <ul style="display:flex;flex-wrap:wrap;gap:1rem;list-style:none;padding:0;">
-                        { for status_counts.iter().map(|(status, count)| html!{
-                            <li style="background:oklch(0.3 0 0);padding:0.5rem 1rem;border-radius:0.5rem;">{ format!("{}: {}", status, count) }</li>
-                        }) }
-                    </ul>
-                </section>
-
-                <section style="margin-bottom:2rem;">
                     <h2 style="border-bottom: 1px solid #444; padding-bottom: 0.5rem;">{ "Applications" }</h2>
                     <table style="width:100%;border-collapse:collapse;color:oklch(0.85 0 0);">
                         <thead>
@@ -289,15 +244,45 @@ pub fn app_root() -> Html {
                                 <th style="padding:0.5rem;border-bottom:1px solid #555;text-align:left;">{ "Position" }</th>
                                 <th style="padding:0.5rem;border-bottom:1px solid #555;text-align:left;">{ "Status" }</th>
                                 <th style="padding:0.5rem;border-bottom:1px solid #555;text-align:left;">{ "Date" }</th>
+                                <th style="padding:0.5rem;border-bottom:1px solid #555;text-align:left;">{ "" }</th>
                             </tr>
                         </thead>
                         <tbody>
-                            { for applications.iter().map(|app| html! {
-                                <tr class="job-row" key={app.temp_id.to_string()} style="border-bottom:1px solid #444;">
+                            { for applications.iter().enumerate().map(|(idx, app)| html! {
+                                <tr class="job-row" key={
+                                    if let Some(id) = app.id {
+                                        format!("id-{}", id)
+                                    } else {
+                                        format!("temp-{}-{}-{}-{}", app.company, app.position, app.date, idx)
+                                    }
+                                } style="border-bottom:1px solid #444;">
                                     <td style="padding:0.5rem;">{ &app.company }</td>
                                     <td style="padding:0.5rem;">{ &app.position }</td>
                                     <td style="padding:0.5rem;">{ format!("{:?}", app.status) }</td>
                                     <td style="padding:0.5rem;">{ &app.date }</td>
+                                    <td style="padding:0.5rem;">
+                                        <button onclick={
+                                            let applications = applications.clone();
+                                            let app_id = app.id;
+                                            Callback::from(move |_| {
+                                                let applications = applications.clone();
+                                                wasm_bindgen_futures::spawn_local(async move {
+                                                    if let Some(id) = app_id {
+                                                        let base_url = "http://127.0.0.1:8080";
+                                                        let url = format!("{}/api/jobs/{}", base_url, id);
+                                                        let resp = Request::delete(&url).send().await;
+                                                        if let Ok(r) = resp {
+                                                            if r.ok() {
+                                                                let mut current_apps = (*applications).clone();
+                                                                current_apps.retain(|j| j.id != Some(id));
+                                                                applications.set(current_apps);
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                            })
+                                        } style="background:#dc3545;color:#fff;padding:0.2rem 0.7rem;border:none;border-radius:0.3rem;cursor:pointer;">{"Delete"}</button>
+                                    </td>
                                 </tr>
                             }) }
                         </tbody>

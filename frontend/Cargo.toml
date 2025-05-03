@@ -1,3 +1,5 @@
+chart = { package = "yew-chart", version = "0.6" }
+plotly = { package = "yew-plotly", version = "0.7" }
 [package]
 name = "applyforge"
 version = "0.1.0"
@@ -9,7 +11,7 @@ license = "MIT OR Apache-2.0"
 keywords = ["yew", "trunk"]
 categories = ["gui", "wasm", "web-programming"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
 yew = { version="0.21", features=["csr"] }
 web-sys = { version = "0.3", features = ["HtmlInputElement", "HtmlSelectElement"] }
@@ -22,3 +24,4 @@ gloo = "0.11.0"
 gloo-storage = "0.3"
 gloo-utils = "0.2.0"
 uuid = { version = "1.8", features = ["v4", "serde", "js"] } # Added js feature for WASM RNG
+plotters = { version = "0.3", default-features = false, features = ["svg_backend"] }

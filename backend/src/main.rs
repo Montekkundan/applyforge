@@ -1,3 +1,17 @@
+#[actix_web::delete("/api/jobs/{id}")]
+async fn delete_job(
+    db: web::Data<PgPool>,
+    id: web::Path<usize>,
+) -> impl Responder {
+    let id: i32 = *id as i32;
+    let result = sqlx::query!("DELETE FROM jobs WHERE id = $1", id)
+        .execute(db.get_ref())
+        .await;
+    match result {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
 mod models;
 use actix_cors::Cors;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
@@ -85,7 +99,7 @@ async fn add_job(
     db: web::Data<PgPool>,
     job: web::Json<JobApplication>,
 ) -> impl Responder {
-    let job = job.into_inner();
+    let mut job = job.into_inner();
     let rec = sqlx::query!(
         "INSERT INTO jobs (company, position, status, date, username) VALUES ($1, $2, $3, $4, $5) RETURNING id",
         job.company,
@@ -98,8 +112,7 @@ async fn add_job(
     .await;
     match rec {
         Ok(record) => {
-            let mut job = job;
-            job.id = record.id as usize;
+            job.id = Some(record.id as usize);
             HttpResponse::Ok().json(job)
         },
         Err(_) => HttpResponse::InternalServerError().finish(),
@@ -120,7 +133,7 @@ async fn get_jobs(
     match jobs {
         Ok(records) => {
             let jobs: Vec<models::JobApplication> = records.into_iter().map(|rec| models::JobApplication {
-                id: rec.id as usize,
+                id: Some(rec.id as usize),
                 company: rec.company,
                 position: rec.position,
                 status: match rec.status.as_str() {
@@ -186,6 +199,7 @@ async fn main() -> std::io::Result<()> {
             .service(login)
             .service(add_job)
             .service(get_jobs)
+            .service(delete_job)
     })
     .bind(("0.0.0.0", 8080))?
     .run()

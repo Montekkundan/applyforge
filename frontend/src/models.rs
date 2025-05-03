@@ -11,7 +11,7 @@ pub enum ApplicationStatus {
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct JobApplication {
-    pub id: usize,
+    pub id: Option<usize>,
     pub company: String,
     pub position: String,
     pub status: ApplicationStatus,
