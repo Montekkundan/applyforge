@@ -1,4 +1,6 @@
 use yew::prelude::*;
+use web_sys::wasm_bindgen::JsValue;
+use web_sys::wasm_bindgen::JsCast;
 use crate::login_register::LoginRegister;
 use crate::models::ApplicationStatus;
 use gloo_net::http::Request;
@@ -294,7 +296,41 @@ pub fn app_root() -> Html {
                 </section>
 
                 <section style="display:flex;gap:1rem;justify-content:center;margin-top:2rem;">
-                    <button style="background:#28a745;color:#fff;padding:0.5rem 1rem;border:none;border-radius:0.5rem;cursor:pointer;">{ "Export to CSV" }</button>
+                    <button
+                        onclick={
+                            let applications = applications.clone();
+                            Callback::from(move |_| {
+                                let apps = (*applications).clone();
+                                let mut wtr = String::from("Company,Position,Status,Date\n");
+                                for app in apps.iter() {
+                                    wtr.push_str(&format!(
+                                        "\"{}\",\"{}\",\"{:?}\",\"{}\"\n",
+                                        app.company.replace('"', ""),
+                                        app.position.replace('"', ""),
+                                        app.status,
+                                        app.date
+                                    ));
+                                }
+                                let window = web_sys::window().expect("no global `window` exists");
+                                let document = window.document().expect("should have a document on window");
+                                let blob_parts = js_sys::Array::new();
+                                blob_parts.push(&JsValue::from_str(&wtr));
+                                let blob = web_sys::Blob::new_with_str_sequence(&blob_parts).unwrap();
+                                let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+                                let a = document.create_element("a").unwrap();
+                                a.set_attribute("href", &url).unwrap();
+                                a.set_attribute("download", "applications.csv").unwrap();
+                                document.body().unwrap().append_child(&a).unwrap();
+                                let a_html = a.dyn_ref::<web_sys::HtmlElement>().unwrap();
+                                a_html.click();
+                                document.body().unwrap().remove_child(&a).unwrap();
+                                web_sys::Url::revoke_object_url(&url).unwrap();
+                            })
+                        }
+                        style="background:#28a745;color:#fff;padding:0.5rem 1rem;border:none;border-radius:0.5rem;cursor:pointer;"
+                    >
+                        { "Export to CSV" }
+                    </button>
                      <button onclick={Callback::from(move |_| {
                          LocalStorage::delete(USER_KEY);
                          user.set(None);
